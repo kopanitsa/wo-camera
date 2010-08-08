@@ -2,21 +2,19 @@ package com.kopanitsa.laughingman;
 
 import java.io.IOException;
 
-import com.kopanitsa.common.camera.CameraUtil;
-
 import android.app.Activity;
 import android.graphics.Bitmap;
 import android.graphics.Point;
 import android.hardware.Camera;
 import android.hardware.Camera.PreviewCallback;
 import android.os.Bundle;
-import android.os.Handler;
-import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.Window;
 import android.view.WindowManager;
 import android.view.ViewGroup.LayoutParams;
+
+import com.kopanitsa.common.camera.CameraUtil;
 
 public class LaughingManActiviy extends Activity {
     private static final String TAG = "LaughingManActiviy";
@@ -30,7 +28,6 @@ public class LaughingManActiviy extends Activity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_NO_TITLE);
-        setContentView(R.layout.main);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
         mSurface = new SurfaceView(this);
