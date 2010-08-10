@@ -7,10 +7,11 @@ import java.util.Date;
 
 import android.app.Activity;
 import android.content.ContentResolver;
-import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
 import android.graphics.Point;
+import android.graphics.drawable.Drawable;
 import android.hardware.Camera;
 import android.hardware.Camera.PreviewCallback;
 import android.net.Uri;
@@ -144,14 +145,12 @@ public class LaughingManActiviy extends Activity {
     };
     
     public void takePicture() {
-        final Context context = this;
         mCamera.takePicture(null,null,new Camera.PictureCallback() {
             public void onPictureTaken(byte[] data,Camera camera) {
                 try {
                     Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
-                    
-                    mFaceDrawer.startFaceCatch();
-                    addImageAsCamera(mContentResolver, bitmap);
+                    Drawable mask = mFaceDrawer.getMaskImage();
+                    addImageWithMask(mContentResolver, bitmap, mask);
                 } catch (Exception e) {
                     Log.e(TAG,""+e.toString());
                 }
@@ -160,13 +159,35 @@ public class LaughingManActiviy extends Activity {
         }); 
     }
 
-    public static Uri addImageAsCamera(ContentResolver cr, Bitmap bitmap) {  
+    public static Uri addImageWithMask(ContentResolver cr, Bitmap src, Drawable mask) {  
+        Uri uri = null;
+        if(src != null){
+            // add mask
+            Canvas canvas = new Canvas();
+            Bitmap bitmap = src.copy(src.getConfig(), true); // src is immutable
+            canvas.setBitmap(bitmap);
+            FaceCatcher face = new FaceCatcher(bitmap);
+            FaceCatcher.drawImageToCanvas(canvas, mask, face);
+            // save
+            uri =  save(cr, bitmap);
+            bitmap.recycle();
+            bitmap = null;
+        }
+
+        return uri;
+    }
+    
+    public static void a(Canvas canvas){
+        
+    }
+    
+    public static Uri  save(ContentResolver cr, Bitmap bitmap){
         long dateTaken = System.currentTimeMillis();  
         String name = FILE_PREFIX + createName(dateTaken) + FILE_SUFFIX;  
         String uriStr = MediaStore.Images.Media.insertImage(cr, bitmap, name,  
                 null);  
         return Uri.parse(uriStr);  
-    }  
+    }
   
     private static String createName(long dateTaken) {  
         DateFormat df = new SimpleDateFormat("-yyyyMMddHHmmss-");
@@ -175,25 +196,9 @@ public class LaughingManActiviy extends Activity {
         return time+dateTaken;
     }  
 
-//    //バイトデータ→SDカード
-//    private static void data2sd(Context context,
-//        byte[] w,String fileName) throws Exception {
-//        //SDカードへのデータ保存
-//        FileOutputStream fos=null;
-//        try {
-//            fos=new FileOutputStream("/sdcard/"+fileName);
-//            fos.write(w);
-//            fos.close();
-//            Log.d(TAG,"picture saved:"+fileName);
-//        } catch (Exception e) {
-//            if (fos!=null) fos.close();
-//            throw e;
-//        }
-//    }
-
-    
     private class ShutterClickListener implements View.OnClickListener {
         public void onClick(View v) {
+//            c.autoFocus(mAutoFocusCallback);
             takePicture();
         }
     }
