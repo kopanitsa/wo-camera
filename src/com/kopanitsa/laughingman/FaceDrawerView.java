@@ -1,13 +1,14 @@
 package com.kopanitsa.laughingman;
 
 import android.content.Context;
-import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.PointF;
 import android.graphics.drawable.Drawable;
+import android.util.AttributeSet;
+import android.util.Log;
 import android.view.View;
 
 public final class FaceDrawerView extends View{
@@ -18,7 +19,6 @@ public final class FaceDrawerView extends View{
     private float  eyesDistance[] = new float[NUM_FACES]; 
 
     private Drawable mImage;
-    private Drawable mLogo;
     private Bitmap mSource;
     private FaceCatcher mFace;
 
@@ -29,9 +29,22 @@ public final class FaceDrawerView extends View{
 
     public FaceDrawerView(Context context) {
         super(context);
+        init(context);
+    }
+
+    public FaceDrawerView(Context context, AttributeSet attrs) {
+        super(context, attrs);
+        init(context);
+    }
+    
+    public FaceDrawerView(Context context, AttributeSet attrs, int defStyle){
+        super(context, attrs, defStyle);
+        init(context);
+    }
+    
+    private void init(Context context){
         setFocusable(true);
         mImage = context.getResources().getDrawable(R.drawable.laughingman); 
-        mLogo = context.getResources().getDrawable(R.drawable.logo);
     }
 
     public void setResource(int resourceId){
@@ -55,9 +68,7 @@ public final class FaceDrawerView extends View{
 
     @Override
     protected void onDraw(Canvas canvas){
-        mLogo.setBounds(30, 10, 578, 80);
-        mLogo.draw(canvas);
-        
+        // laughing man
         if(mSource != null){
 
             samplePaint.setStyle(Paint.Style.FILL); 
@@ -93,4 +104,5 @@ public final class FaceDrawerView extends View{
             } 
         }
     }
-    }
+    
+}

@@ -1,12 +1,42 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:orientation="vertical"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
     >
-<TextView  
-    android:layout_width="fill_parent" 
-    android:layout_height="wrap_content" 
-    android:text="@string/hello"
+<SurfaceView android:id="@+id/surfaceview" 
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent" 
     />
+<view class="com.kopanitsa.laughingman.FaceDrawerView"
+    android:id="@+id/facedrawer"
+    android:layout_width="fill_parent" 
+    android:layout_height="fill_parent" 
+    />
+<ImageView android:id="@+id/logo"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:src="@drawable/logo"
+    android:paddingLeft="20px"
+    android:paddingTop="20px"
+    />
+<LinearLayout
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:gravity="bottom|right"
+    android:paddingRight="40px"
+    android:paddingBottom="20px"
+    >
+	<Button android:id="@+id/shutter"
+	    android:layout_width="wrap_content"
+	    android:layout_height="wrap_content"
+	    android:text="@string/string_shoot"
+	    android:textSize="30px"
+        android:paddingRight="30px"
+        android:paddingLeft="30px"
+	    />
 </LinearLayout>
+
+
+
+</FrameLayout>

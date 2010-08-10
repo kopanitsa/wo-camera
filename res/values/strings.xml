@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="hello">Hello World, LaughingManActiviy!</string>
-    <string name="app_name">The Laughing Man</string>
+    <string name="app_name">LaughingMan</string>
+    <string name="string_shoot">shoot</string>
 </resources>
