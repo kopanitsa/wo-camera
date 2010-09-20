@@ -7,6 +7,7 @@ import java.util.Date;
 
 import android.app.Activity;
 import android.content.ContentResolver;
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -24,8 +25,7 @@ import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Button;
-
-import com.kopanitsa.common.camera.CameraUtil;
+import android.widget.ProgressBar;
 
 public class LaughingManActiviy extends Activity {
     private static final String TAG = "LaughingManActiviy";
@@ -37,8 +37,12 @@ public class LaughingManActiviy extends Activity {
     private FaceDrawerView mFaceDrawer;
     private SurfaceView mSurface;
     private Button mShutter;
+    private ProgressBar mProgress;
     
     private ContentResolver mContentResolver;
+    private DecodeThread mDecodeThread;
+    
+    private boolean mSaving = false;
     
     /** Called when the activity is first created. */
     @Override
@@ -53,16 +57,18 @@ public class LaughingManActiviy extends Activity {
         mSurface = (SurfaceView) findViewById(R.id.surfaceview);
         SurfaceHolder holder = mSurface.getHolder();
         holder.addCallback(mSurfaceListener);
-        holder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS  );
+        holder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
         mFaceDrawer = (FaceDrawerView) findViewById(R.id.facedrawer);
         mShutter = (Button) findViewById(R.id.shutter);
         ShutterClickListener shutterListener = new ShutterClickListener();
         mShutter.setOnClickListener(shutterListener);
-        
+        mProgress = (ProgressBar) findViewById(R.id.progress_bar);
+        mProgress.setVisibility(View.GONE);
         mContentResolver = getContentResolver();
     }
     
 
+    Context mContext = this;
     private SurfaceHolder.Callback mSurfaceListener = 
         new SurfaceHolder.Callback() {
     
@@ -70,6 +76,8 @@ public class LaughingManActiviy extends Activity {
             try {
                 mCamera = Camera.open();
                 mCamera.setPreviewDisplay(holder);
+                
+                mDecodeThread = new DecodeThread();
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -82,84 +90,98 @@ public class LaughingManActiviy extends Activity {
                 mCamera.release();
                 mCamera = null;
             }
+            if (mDecodeThread!=null){
+                mDecodeThread.shouldDecode(false);
+            }
         }
         
         public void surfaceChanged(SurfaceHolder holder, int format, int w, int h) {
             if(mCamera != null){
                 Camera.Parameters parameters = mCamera.getParameters();
-                // for debug
-                //getNicePreviewSize(parameters);
                 
                 parameters.setPreviewSize(w, h);
+                parameters.setPictureSize(1024, 768);
                 //parameters.setPreviewFormat(ImageFormat.JPEG); //useless now...
                 mCamera.setParameters(parameters);
-                mCamera.setPreviewCallback(mPreviewCallback);
+                mCamera.setOneShotPreviewCallback(mPreviewCallback);
+
+//                //--- picture size test
+//                Log.e(TAG,"size:"+parameters.getPictureSize().width+" "+parameters.getPictureSize().height);
+//                List<Camera.Size> list = parameters.getSupportedPictureSizes();
+//                for (int i=0; i<list.size(); i++){
+//                    Log.e(TAG,"support:"+list.get(i).width+" "+list.get(i).height);
+//                }
+//                //---
+
+                
                 mCamera.startPreview();
                 refreshScreenResolution();
+            }
+            if (mDecodeThread!=null){
+                mDecodeThread.setFaceDrawer(mFaceDrawer);
+                mDecodeThread.setResolution(mResolution);
+                mDecodeThread.start();
             }
         }
         
         private Camera.PreviewCallback mPreviewCallback = new PreviewCallback(){
             public void onPreviewFrame(byte[] data, Camera camera) {
-                
-                final int width = mResolution.x;
-                final int height = mResolution.y;
-                int[] rgb = new int[(width * height)];
-                try { 
-                    // create bitmap
-                    Bitmap bmp = Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565);
-                    CameraUtil.decodeYUV(rgb, data, width, height);
-                    bmp.setPixels(rgb, 0, width, 0, 0, width, height);
-                    // recognize faces
-                    mFaceDrawer.setResource(bmp);
-                    mFaceDrawer.startFaceCatch();
-                    mFaceDrawer.invalidate();
-
-                    // release bitmap
-                    if (bmp != null){
-                        bmp.recycle();
-                        bmp = null;
-                    }
-                } catch (Exception e) { 
+                if(mDecodeThread.testQueueIsEmpty()){
+                    mDecodeThread.setData(data);
                 }
+                mCamera.setOneShotPreviewCallback(mPreviewCallback);
             }
         };
-        
+
         private void refreshScreenResolution(){
             int w = mSurface.getWidth();
             int h = mSurface.getHeight();
             mResolution = new Point(w,h);
         }
-        
-        /**
-        // for debug
-        private void logAvailablePreviewSize(Camera.Parameters parameters){
-             List<Camera.Size> sizeList = parameters.getSupportedPreviewSizes();
-             for (int i=0; i<sizeList.size(); i++){
-                 Camera.Size size = sizeList.get(i);
-                 Log.e(TAG, "w:"+size.width+" h:"+size.height);
-             }
-            
-        }
-        */
     };
     
     public void takePicture() {
         mCamera.takePicture(null,null,new Camera.PictureCallback() {
             public void onPictureTaken(byte[] data,Camera camera) {
-                try {
-                    Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
-                    Drawable mask = mFaceDrawer.getMaskImage();
-                    addImageWithMask(mContentResolver, bitmap, mask);
-                } catch (Exception e) {
-                    Log.e(TAG,""+e.toString());
+                mSaving = true;
+                if(mDecodeThread.testQueueIsEmpty()){
+                    mDecodeThread.setData(data);
                 }
+                SaveAsyncTask task = new SaveAsyncTask(mSaveTaskListener, data);
+                task.execute(data);
                 mCamera.startPreview();
+                mProgress.setVisibility(View.VISIBLE);
+                
+//                Debug.stopMethodTracing();
             }
         }); 
     }
+    
+    public void saveImage(byte[] data){
+        try {
+            Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
+            Drawable mask = mFaceDrawer.getMaskImage();
+            addImageWithMask(mContentResolver, bitmap, mask);
+        } catch (Exception e) {
+            Log.e(TAG,""+e.toString());
+        }
+    }
+    
+    private SaveAsyncTask.SaveAsyncTaskListener mSaveTaskListener 
+    = new SaveAsyncTask.SaveAsyncTaskListener(){
+        public void start(byte[] data){
+            saveImage(data);
+        }
 
-    public static Uri addImageWithMask(ContentResolver cr, Bitmap src, Drawable mask) {  
+        public void onSaveFinished() {
+            Log.e(TAG,"onSaveFinished()******************");
+            mSaving = false;
+            mProgress.setVisibility(View.GONE);
+//            mCamera.startPreview();
+        }
+    };
+
+    public Uri addImageWithMask(ContentResolver cr, Bitmap src, Drawable mask) {  
         Uri uri = null;
         if(src != null){
             // add mask
@@ -167,6 +189,7 @@ public class LaughingManActiviy extends Activity {
             Bitmap bitmap = src.copy(src.getConfig(), true); // src is immutable
             canvas.setBitmap(bitmap);
             FaceCatcher face = new FaceCatcher(bitmap);
+
             FaceCatcher.drawImageToCanvas(canvas, mask, face);
             // save
             uri =  save(cr, bitmap);
@@ -177,11 +200,7 @@ public class LaughingManActiviy extends Activity {
         return uri;
     }
     
-    public static void a(Canvas canvas){
-        
-    }
-    
-    public static Uri  save(ContentResolver cr, Bitmap bitmap){
+    public static Uri save(ContentResolver cr, Bitmap bitmap){
         long dateTaken = System.currentTimeMillis();  
         String name = FILE_PREFIX + createName(dateTaken) + FILE_SUFFIX;  
         String uriStr = MediaStore.Images.Media.insertImage(cr, bitmap, name,  
@@ -197,8 +216,14 @@ public class LaughingManActiviy extends Activity {
     }  
 
     private class ShutterClickListener implements View.OnClickListener {
+        FocusListener focusListener = new FocusListener();
         public void onClick(View v) {
-//            c.autoFocus(mAutoFocusCallback);
+            mCamera.autoFocus(focusListener);
+        }
+    }
+    
+    private class FocusListener implements Camera.AutoFocusCallback{
+        public void onAutoFocus(boolean success, Camera camera) {
             takePicture();
         }
     }

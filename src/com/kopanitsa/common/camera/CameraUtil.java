@@ -1,6 +1,10 @@
 package com.kopanitsa.common.camera;
 
 public class CameraUtil {
+    static {
+        System.loadLibrary("CameraNativeUtil");
+    }
+    
     public static void decodeYUV(int[] out, byte[] fg, int width, int height) throws NullPointerException, IllegalArgumentException { 
         final int sz = width * height; 
         if(out == null) throw new NullPointerException("buffer 'out' is null"); 
@@ -30,5 +34,16 @@ public class CameraUtil {
                         out[pixPtr++] = 0xff000000 + (B << 16) + (G << 8) + R;
                 } 
         } 
-    } 
+    }
+    
+    public static void decodeYUV_fast(int[] out, byte[] fg, int width, int height) throws NullPointerException, IllegalArgumentException { 
+        final int sz = width * height; 
+        if(out == null) throw new NullPointerException("buffer 'out' is null"); 
+        if(out.length < sz) throw new IllegalArgumentException("buffer 'out' size " + out.length + " < minimum " + sz); 
+        if(fg == null) throw new NullPointerException("buffer 'fg' is null"); 
+        if(fg.length < sz) throw new IllegalArgumentException("buffer 'fg' size " + fg.length + " < minimum " + sz * 3/ 2); 
+        decodeYUV_native(out,fg,width,height);
+    }
+
+    public static native void decodeYUV_native(int[] out, byte[] fg, int width, int height);
 }

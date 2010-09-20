@@ -5,9 +5,10 @@ import android.graphics.Canvas;
 import android.graphics.PointF;
 import android.graphics.drawable.Drawable;
 import android.media.FaceDetector;
+import android.util.Log;
 
 public class FaceCatcher { 
-     private static final int NUM_FACES = 7; 
+     private static final int NUM_FACES = 3; 
      private FaceDetector arrayFaces; 
      private FaceDetector.Face getAllFaces[] = new FaceDetector.Face[NUM_FACES]; 
      private FaceDetector.Face getFace = null; 
@@ -17,8 +18,7 @@ public class FaceCatcher {
      private int picWidth, picHeight;
       
      public FaceCatcher(Bitmap sourceImage) { 
-    	 
-    	  picWidth = sourceImage.getWidth(); 
+          picWidth = sourceImage.getWidth(); 
           picHeight = sourceImage.getHeight(); 
 
           arrayFaces = new FaceDetector( picWidth, picHeight, NUM_FACES ); 
@@ -76,7 +76,9 @@ public class FaceCatcher {
                  mask.setBounds(xPosition, yPosition, xLength, yLength);
                  mask.setVisible(true, true);
                  mask.draw(canvas);
-             } 
+             } else {
+                 break;
+             }
          } 
      }
 } 

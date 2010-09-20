@@ -27,11 +27,20 @@
     android:paddingRight="40px"
     android:paddingBottom="20px"
     >
-	<Button android:id="@+id/shutter"
-	    android:layout_width="wrap_content"
-	    android:layout_height="wrap_content"
-	    android:text="@string/string_shoot"
-	    android:textSize="30px"
+    <ProgressBar
+        android:id="@+id/progress_bar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        style="?android:attr/progressBarStyle"
+        android:paddingRight="30px"
+        android:paddingBottom="5px"
+        android:paddingLeft="30px"
+        />
+    <Button android:id="@+id/shutter"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/string_shoot"
+        android:textSize="30px"
         android:paddingRight="30px"
         android:paddingLeft="30px"
 	    />

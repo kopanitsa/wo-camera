@@ -61,7 +61,7 @@ public final class FaceDrawerView extends View{
     @Override
     protected void onDraw(Canvas canvas){
         // laughing man
-        if(mSource != null){
+        if(mSource != null && mFace!=null){
             float xRatio = (float)getWidth() / mSource.getWidth(); 
             float yRatio = (float)getHeight() / mSource.getHeight();
             FaceCatcher.drawImageToCanvas(canvas, mMask, mFace, xRatio, yRatio);
