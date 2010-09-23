@@ -6,11 +6,21 @@ import android.graphics.PointF;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.media.FaceDetector;
+import android.os.Build;
 import android.util.Log;
 
 public class FaceCatcher { 
     private static final String TAG = "FaceCatcher";
-    private static final int LARGE_IMAGE_WIDTH = 820;
+    private static final int LARGE_IMAGE_WIDTH_N1 = 400;
+    private static final int LARGE_IMAGE_WIDTH_XPERIA = 820;
+    
+    private static int LARGE_IMAGE_WIDTH = LARGE_IMAGE_WIDTH_XPERIA;
+    static {
+        if (Build.MANUFACTURER.indexOf("HTC")!=-1){
+            LARGE_IMAGE_WIDTH = LARGE_IMAGE_WIDTH_N1;
+        }
+    }
+    
     private static final int NUM_FACES = 3; 
     private FaceDetector mFaceDetector; 
     private FaceDetector.Face mFaces[] = new FaceDetector.Face[NUM_FACES]; 

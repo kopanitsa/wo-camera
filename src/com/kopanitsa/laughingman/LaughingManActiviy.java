@@ -16,6 +16,7 @@ import android.graphics.drawable.Drawable;
 import android.hardware.Camera;
 import android.hardware.Camera.PreviewCallback;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.util.Log;
@@ -53,7 +54,7 @@ public class LaughingManActiviy extends Activity {
                 WindowManager.LayoutParams.FLAG_FULLSCREEN | WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         setContentView(R.layout.main);
-
+        
         mSurface = (SurfaceView) findViewById(R.id.surfaceview);
         SurfaceHolder holder = mSurface.getHolder();
         holder.addCallback(mSurfaceListener);
