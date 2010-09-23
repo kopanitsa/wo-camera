@@ -16,7 +16,6 @@ import android.graphics.drawable.Drawable;
 import android.hardware.Camera;
 import android.hardware.Camera.PreviewCallback;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.util.Log;
@@ -39,8 +38,6 @@ public class LaughingManActiviy extends Activity {
     private SurfaceView mSurface;
     private Button mShutter;
     private ProgressBar mProgress;
-    private String mModel;
-    private String mDevice;
     
     private ContentResolver mContentResolver;
     private DecodeThread mDecodeThread;
@@ -57,9 +54,6 @@ public class LaughingManActiviy extends Activity {
 
         setContentView(R.layout.main);
 
-        mModel = Build.MODEL;
-        mDevice = Build.DEVICE;
-        
         mSurface = (SurfaceView) findViewById(R.id.surfaceview);
         SurfaceHolder holder = mSurface.getHolder();
         holder.addCallback(mSurfaceListener);
@@ -105,16 +99,8 @@ public class LaughingManActiviy extends Activity {
             if(mCamera != null){
                 Camera.Parameters parameters = mCamera.getParameters();
                 
-                // In XPERIA, I cannot set picture size correctly.
-                // When preview size is changed, PICTURE size also changed and 
-                // cannot handle correctly...
-//                if (mDevice.indexOf("SonyEricsson") == -1){
-                if (true){
-                    parameters.setPreviewSize(w, h);
-                    Log.e(TAG,"w:"+w+" h:"+h);
-//                    parameters.setPictureSize(1024, 768);
-                    parameters.setPictureSize(640, 480);
-                }
+                parameters.setPreviewSize(w, h);
+                parameters.setPictureSize(1024, 768); // for nexus one
                 
                 //parameters.setPreviewFormat(ImageFormat.JPEG); //useless now...
                 mCamera.setParameters(parameters);

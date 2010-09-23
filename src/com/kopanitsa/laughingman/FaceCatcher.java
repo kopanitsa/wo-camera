@@ -3,50 +3,72 @@ package com.kopanitsa.laughingman;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.PointF;
+import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.media.FaceDetector;
 import android.util.Log;
 
 public class FaceCatcher { 
     private static final String TAG = "FaceCatcher";
+    private static final int LARGE_IMAGE_WIDTH = 820;
     private static final int NUM_FACES = 3; 
-    private FaceDetector arrayFaces; 
-    private FaceDetector.Face getAllFaces[] = new FaceDetector.Face[NUM_FACES]; 
-    private FaceDetector.Face getFace = null; 
+    private FaceDetector mFaceDetector; 
+    private FaceDetector.Face mFaces[] = new FaceDetector.Face[NUM_FACES]; 
 
-    private PointF eyesMidPts[] = new PointF[NUM_FACES]; 
-    private float  eyesDistance[] = new float[NUM_FACES];       
-    private int picWidth, picHeight;
+    private PointF mEyesMidPts[] = new PointF[NUM_FACES]; 
+    private float  mEyesDistance[] = new float[NUM_FACES];       
 
-    public FaceCatcher(Bitmap sourceImage) { 
-        picWidth = sourceImage.getWidth(); 
-        picHeight = sourceImage.getHeight(); 
-        Log.e(TAG,"w:"+picWidth+" h:"+picHeight);
+    public FaceCatcher(Bitmap originalBmp) {
+        float ratio = 1.f;
+        Bitmap sourceBmp = null;
+        if (originalBmp.getWidth() <= LARGE_IMAGE_WIDTH) {
+            sourceBmp = originalBmp;
+        } else {
+            ratio = originalBmp.getWidth() / LARGE_IMAGE_WIDTH;
+            int w = (int)(originalBmp.getWidth()  / ratio);
+            int h = (int)(originalBmp.getHeight() / ratio);
+            sourceBmp = resizeBitmap(originalBmp, w, h);
+        }
+        
+        int picWidth = sourceBmp.getWidth(); 
+        int picHeight = sourceBmp.getHeight(); 
 
-        arrayFaces = new FaceDetector( picWidth, picHeight, NUM_FACES ); 
-        arrayFaces.findFaces(sourceImage, getAllFaces); 
-        for (int i = 0; i < getAllFaces.length; i++) 
-        { 
-            getFace = getAllFaces[i]; 
+        mFaceDetector = new FaceDetector( picWidth, picHeight, NUM_FACES ); 
+        int numFace = mFaceDetector.findFaces(sourceBmp, mFaces); 
+        
+        for (int i = 0; i < numFace; i++) { 
+            FaceDetector.Face face = mFaces[i]; 
             try { 
                 PointF eyesMP = new PointF(); 
-                getFace.getMidPoint(eyesMP); 
-                getFace.pose(FaceDetector.Face.EULER_X & FaceDetector.Face.EULER_Y & FaceDetector.Face.EULER_Z );
-                eyesDistance[i] = getFace.eyesDistance(); 
-                eyesMidPts[i] = eyesMP; 
+                face.getMidPoint(eyesMP); 
+                face.pose(FaceDetector.Face.EULER_X & FaceDetector.Face.EULER_Y & FaceDetector.Face.EULER_Z );
+                mEyesDistance[i] = face.eyesDistance()*ratio; 
+                mEyesMidPts[i] = eyesMP;
+                mEyesMidPts[i].x *= ratio;
+                mEyesMidPts[i].y *= ratio;
+            } catch (Exception e) { 
             } 
-            catch (Exception e) 
-            { 
-            } 
+        }
 
+        if (ratio>0){
+            sourceBmp.recycle();
         }
     }
 
+    public static Bitmap resizeBitmap(Bitmap bmp,int w,int h) {
+        Bitmap result=Bitmap.createBitmap(w,h,Bitmap.Config.RGB_565);
+        Canvas canvas=new Canvas(result);
+        BitmapDrawable drawable=new BitmapDrawable(bmp);
+        drawable.setBounds(0,0,w,h);
+        drawable.draw(canvas);
+        return result;
+    } 
+
     public float[] getEyeDistance(){
-        return eyesDistance;
+        return mEyesDistance;
     }
     public PointF[] getEyePoint(){
-        return eyesMidPts;
+        return mEyesMidPts;
     }
 
     public static final void drawImageToCanvas(Canvas canvas, Drawable mask, 
@@ -83,4 +105,5 @@ public class FaceCatcher {
             }
         } 
     }
+    
 } 
