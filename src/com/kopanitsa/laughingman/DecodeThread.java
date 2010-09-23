@@ -62,8 +62,9 @@ public class DecodeThread extends Thread {
             if (!testQueueIsEmpty()){
                 byte[] data = null;
                 data = mQueue.peek();
-                Log.d(TAG,"decode");
+                Log.d(TAG,"decode -s");
                 decode(data);
+                Log.d(TAG,"decode -e");
                 mQueue.remove();
             }
         }

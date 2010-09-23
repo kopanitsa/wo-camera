@@ -16,6 +16,7 @@ import android.graphics.drawable.Drawable;
 import android.hardware.Camera;
 import android.hardware.Camera.PreviewCallback;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.util.Log;
@@ -38,6 +39,8 @@ public class LaughingManActiviy extends Activity {
     private SurfaceView mSurface;
     private Button mShutter;
     private ProgressBar mProgress;
+    private String mModel;
+    private String mDevice;
     
     private ContentResolver mContentResolver;
     private DecodeThread mDecodeThread;
@@ -54,6 +57,9 @@ public class LaughingManActiviy extends Activity {
 
         setContentView(R.layout.main);
 
+        mModel = Build.MODEL;
+        mDevice = Build.DEVICE;
+        
         mSurface = (SurfaceView) findViewById(R.id.surfaceview);
         SurfaceHolder holder = mSurface.getHolder();
         holder.addCallback(mSurfaceListener);
@@ -99,21 +105,27 @@ public class LaughingManActiviy extends Activity {
             if(mCamera != null){
                 Camera.Parameters parameters = mCamera.getParameters();
                 
-                parameters.setPreviewSize(w, h);
-                parameters.setPictureSize(1024, 768);
+                // In XPERIA, I cannot set picture size correctly.
+                // When preview size is changed, PICTURE size also changed and 
+                // cannot handle correctly...
+//                if (mDevice.indexOf("SonyEricsson") == -1){
+                if (true){
+                    parameters.setPreviewSize(w, h);
+                    Log.e(TAG,"w:"+w+" h:"+h);
+//                    parameters.setPictureSize(1024, 768);
+                    parameters.setPictureSize(640, 480);
+                }
+                
                 //parameters.setPreviewFormat(ImageFormat.JPEG); //useless now...
                 mCamera.setParameters(parameters);
-                mCamera.setOneShotPreviewCallback(mPreviewCallback);
 
-//                //--- picture size test
-//                Log.e(TAG,"size:"+parameters.getPictureSize().width+" "+parameters.getPictureSize().height);
-//                List<Camera.Size> list = parameters.getSupportedPictureSizes();
-//                for (int i=0; i<list.size(); i++){
-//                    Log.e(TAG,"support:"+list.get(i).width+" "+list.get(i).height);
-//                }
-//                //---
-
+                parameters = mCamera.getParameters();
                 
+                // ---- xperia cannot handle one shot preview ? ---
+//                mCamera.setOneShotPreviewCallback(mPreviewCallback);
+                mCamera.setPreviewCallback(mPreviewCallback);
+                // ---- xperia cannot handle one shot preview ? ---
+
                 mCamera.startPreview();
                 refreshScreenResolution();
             }
@@ -129,7 +141,9 @@ public class LaughingManActiviy extends Activity {
                 if(mDecodeThread.testQueueIsEmpty()){
                     mDecodeThread.setData(data);
                 }
-                mCamera.setOneShotPreviewCallback(mPreviewCallback);
+                // ---- xperia cannot handle one shot preview ? ---
+                //mCamera.setOneShotPreviewCallback(mPreviewCallback);
+                // ---- xperia cannot handle one shot preview ? ---
             }
         };
 
@@ -143,15 +157,15 @@ public class LaughingManActiviy extends Activity {
     public void takePicture() {
         mCamera.takePicture(null,null,new Camera.PictureCallback() {
             public void onPictureTaken(byte[] data,Camera camera) {
-                mSaving = true;
-                if(mDecodeThread.testQueueIsEmpty()){
-                    mDecodeThread.setData(data);
-                }
-                SaveAsyncTask task = new SaveAsyncTask(mSaveTaskListener, data);
-                task.execute(data);
-                mCamera.startPreview();
+                long start = System.currentTimeMillis();
                 mProgress.setVisibility(View.VISIBLE);
+                saveImage(data);
+                mCamera.startPreview();
+                mProgress.setVisibility(View.GONE);
+                long diff = System.currentTimeMillis() - start;
                 
+                Log.e(TAG,"saving time:"+diff);
+                mSaving = false;
 //                Debug.stopMethodTracing();
             }
         }); 
@@ -167,19 +181,19 @@ public class LaughingManActiviy extends Activity {
         }
     }
     
-    private SaveAsyncTask.SaveAsyncTaskListener mSaveTaskListener 
-    = new SaveAsyncTask.SaveAsyncTaskListener(){
-        public void start(byte[] data){
-            saveImage(data);
-        }
-
-        public void onSaveFinished() {
-            Log.e(TAG,"onSaveFinished()******************");
-            mSaving = false;
-            mProgress.setVisibility(View.GONE);
-//            mCamera.startPreview();
-        }
-    };
+//    private SaveAsyncTask.SaveAsyncTaskListener mSaveTaskListener 
+//    = new SaveAsyncTask.SaveAsyncTaskListener(){
+//        public void start(byte[] data){
+//            saveImage(data);
+//        }
+//
+//        public void onSaveFinished() {
+//            Log.e(TAG,"onSaveFinished()******************");
+//            mSaving = false;
+//            mProgress.setVisibility(View.GONE);
+////            mCamera.startPreview();
+//        }
+//    };
 
     public Uri addImageWithMask(ContentResolver cr, Bitmap src, Drawable mask) {  
         Uri uri = null;
@@ -188,7 +202,9 @@ public class LaughingManActiviy extends Activity {
             Canvas canvas = new Canvas();
             Bitmap bitmap = src.copy(src.getConfig(), true); // src is immutable
             canvas.setBitmap(bitmap);
+
             FaceCatcher face = new FaceCatcher(bitmap);
+            
 
             FaceCatcher.drawImageToCanvas(canvas, mask, face);
             // save
@@ -218,7 +234,10 @@ public class LaughingManActiviy extends Activity {
     private class ShutterClickListener implements View.OnClickListener {
         FocusListener focusListener = new FocusListener();
         public void onClick(View v) {
-            mCamera.autoFocus(focusListener);
+            if(!mSaving){
+                mSaving = true;
+                mCamera.autoFocus(focusListener);
+            }
         }
     }
     
