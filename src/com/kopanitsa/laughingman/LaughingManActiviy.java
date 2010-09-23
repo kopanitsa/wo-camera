@@ -16,17 +16,17 @@ import android.graphics.drawable.Drawable;
 import android.hardware.Camera;
 import android.hardware.Camera.PreviewCallback;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Button;
-import android.widget.ProgressBar;
+import android.widget.ImageView;
 
 public class LaughingManActiviy extends Activity {
     private static final String TAG = "LaughingManActiviy";
@@ -38,12 +38,14 @@ public class LaughingManActiviy extends Activity {
     private FaceDrawerView mFaceDrawer;
     private SurfaceView mSurface;
     private Button mShutter;
-    private ProgressBar mProgress;
+    private ImageView mSavingView;
     
     private ContentResolver mContentResolver;
     private DecodeThread mDecodeThread;
-    
+    private FocusListener mFocusListener = new FocusListener();
+
     private boolean mSaving = false;
+    private boolean mFocusButtonPressed = false;
     
     /** Called when the activity is first created. */
     @Override
@@ -63,11 +65,41 @@ public class LaughingManActiviy extends Activity {
         mShutter = (Button) findViewById(R.id.shutter);
         ShutterClickListener shutterListener = new ShutterClickListener();
         mShutter.setOnClickListener(shutterListener);
-        mProgress = (ProgressBar) findViewById(R.id.progress_bar);
-        mProgress.setVisibility(View.GONE);
+        mSavingView = (ImageView) findViewById(R.id.save_image);
+        mSavingView.setVisibility(View.GONE);
         mContentResolver = getContentResolver();
     }
     
+    @Override
+    public boolean dispatchKeyEvent(KeyEvent event) {
+        android.util.Log.e(TAG,"action:"+event.getAction()+" key:"+event.getKeyCode());
+        if (event.getAction() == KeyEvent.ACTION_DOWN) {
+            switch (event.getKeyCode()) {
+            case KeyEvent.KEYCODE_FOCUS:
+                if (!mFocusButtonPressed){
+                    mCamera.autoFocus(null);
+                    mFocusButtonPressed = true;
+                }
+                break;
+            case KeyEvent.KEYCODE_CAMERA:
+                if(!mSaving){
+                    mSaving = true;
+                    takePicture();
+                    mSavingView.setVisibility(View.VISIBLE);
+                }
+                return true;
+            default:
+            }
+        } else if (event.getAction() == KeyEvent.ACTION_UP){
+            switch (event.getKeyCode()) {
+            case KeyEvent.KEYCODE_FOCUS:
+                mFocusButtonPressed = false;
+                break;
+            default:
+            }
+        }
+        return super.dispatchKeyEvent(event);
+    }
 
     Context mContext = this;
     private SurfaceHolder.Callback mSurfaceListener = 
@@ -144,21 +176,17 @@ public class LaughingManActiviy extends Activity {
     public void takePicture() {
         mCamera.takePicture(null,null,new Camera.PictureCallback() {
             public void onPictureTaken(byte[] data,Camera camera) {
-                long start = System.currentTimeMillis();
-                mProgress.setVisibility(View.VISIBLE);
                 saveImage(data);
                 mCamera.startPreview();
-                mProgress.setVisibility(View.GONE);
-                long diff = System.currentTimeMillis() - start;
+                mSavingView.setVisibility(View.GONE);
                 
-                Log.e(TAG,"saving time:"+diff);
                 mSaving = false;
-//                Debug.stopMethodTracing();
             }
         }); 
     }
     
     public void saveImage(byte[] data){
+        long start = System.currentTimeMillis();
         try {
             Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
             Drawable mask = mFaceDrawer.getMaskImage();
@@ -166,19 +194,20 @@ public class LaughingManActiviy extends Activity {
         } catch (Exception e) {
             Log.e(TAG,""+e.toString());
         }
+        long diff = System.currentTimeMillis() - start;
+        Log.e(TAG,"saving time:"+diff);
     }
     
 //    private SaveAsyncTask.SaveAsyncTaskListener mSaveTaskListener 
-//    = new SaveAsyncTask.SaveAsyncTaskListener(){
+//        = new SaveAsyncTask.SaveAsyncTaskListener(){
 //        public void start(byte[] data){
 //            saveImage(data);
 //        }
 //
 //        public void onSaveFinished() {
-//            Log.e(TAG,"onSaveFinished()******************");
 //            mSaving = false;
-//            mProgress.setVisibility(View.GONE);
-////            mCamera.startPreview();
+//            mSavingView.setVisibility(View.GONE);
+//            mCamera.startPreview();
 //        }
 //    };
 
@@ -219,11 +248,10 @@ public class LaughingManActiviy extends Activity {
     }  
 
     private class ShutterClickListener implements View.OnClickListener {
-        FocusListener focusListener = new FocusListener();
         public void onClick(View v) {
             if(!mSaving){
                 mSaving = true;
-                mCamera.autoFocus(focusListener);
+                mCamera.autoFocus(mFocusListener);
             }
         }
     }
@@ -231,6 +259,7 @@ public class LaughingManActiviy extends Activity {
     private class FocusListener implements Camera.AutoFocusCallback{
         public void onAutoFocus(boolean success, Camera camera) {
             takePicture();
+            mSavingView.setVisibility(View.VISIBLE);
         }
     }
 }

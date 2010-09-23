@@ -1,6 +1,5 @@
 package com.kopanitsa.laughingman;
 
-import android.content.ContentResolver;
 import android.os.AsyncTask;
 
 public class SaveAsyncTask extends AsyncTask<byte[], Integer, Boolean> {
@@ -8,8 +7,6 @@ public class SaveAsyncTask extends AsyncTask<byte[], Integer, Boolean> {
     
     SaveAsyncTaskListener mListener;
     byte[] mData;
-    FaceDrawerView mFaceDrawer;
-    ContentResolver mContentResolver;
     
     public SaveAsyncTask(SaveAsyncTaskListener listener, byte[] data){
         mListener = listener;
