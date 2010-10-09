@@ -1,23 +1,31 @@
 package com.kopanitsa.laughingman;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
 import android.app.Activity;
 import android.content.ContentResolver;
+import android.content.ContentValues;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Point;
+import android.graphics.Bitmap.CompressFormat;
 import android.graphics.drawable.Drawable;
 import android.hardware.Camera;
 import android.hardware.Camera.PreviewCallback;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.provider.MediaStore;
+import android.provider.MediaStore.Images;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.SurfaceHolder;
@@ -32,6 +40,10 @@ public class LaughingManActiviy extends Activity {
     private static final String TAG = "LaughingManActiviy";
     private static final String FILE_PREFIX = "LaughingMan_";
     private static final String FILE_SUFFIX = ".jpg";
+
+    private static final String APPLICATION_NAME = "Laughingman";  
+    private static final Uri IMAGE_URI = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;  
+    private static final String PATH = Environment.getExternalStorageDirectory().toString() + "/" + APPLICATION_NAME;
 
     private Camera mCamera;
     private Point mResolution;
@@ -220,9 +232,8 @@ public class LaughingManActiviy extends Activity {
             canvas.setBitmap(bitmap);
 
             FaceCatcher face = new FaceCatcher(bitmap);
-            
-
             FaceCatcher.drawImageToCanvas(canvas, mask, face);
+
             // save
             uri =  save(cr, bitmap);
             bitmap.recycle();
@@ -232,13 +243,56 @@ public class LaughingManActiviy extends Activity {
         return uri;
     }
     
-    public static Uri save(ContentResolver cr, Bitmap bitmap){
+    private static Uri save(ContentResolver cr, Bitmap bitmap){
         long dateTaken = System.currentTimeMillis();  
-        String name = FILE_PREFIX + createName(dateTaken) + FILE_SUFFIX;  
-        String uriStr = MediaStore.Images.Media.insertImage(cr, bitmap, name,  
-                null);  
-        return Uri.parse(uriStr);  
+        String name = FILE_PREFIX + createName(dateTaken) + FILE_SUFFIX;
+        return addImage(cr, name, dateTaken, PATH, name, bitmap, null);
     }
+    
+    private static Uri addImage(ContentResolver cr, String name, long dateTaken, String directory,  
+            String filename, Bitmap source, byte[] jpegData) {  
+      
+        OutputStream outputStream = null;  
+        String filePath = directory + "/" + filename;  
+        try {  
+            File dir = new File(directory);  
+            if (!dir.exists()) {  
+                dir.mkdirs();  
+                Log.d(TAG, dir.toString() + " create");  
+            }  
+            File file = new File(directory, filename);  
+            if (file.createNewFile()) {  
+                outputStream = new FileOutputStream(file);  
+                if (source != null) {  
+                    source.compress(CompressFormat.JPEG, 75, outputStream);  
+                } else {  
+                    outputStream.write(jpegData);  
+                }  
+            }  
+      
+        } catch (FileNotFoundException ex) {  
+            Log.w(TAG, ex);  
+            return null;  
+        } catch (IOException ex) {  
+            Log.w(TAG, ex);  
+            return null;  
+        } finally {  
+            if (outputStream != null) {  
+                try {  
+                    outputStream.close();  
+                } catch (Throwable t) {  
+                }  
+            }  
+        }  
+          
+        ContentValues values = new ContentValues(7);  
+        values.put(Images.Media.TITLE, name);  
+        values.put(Images.Media.DISPLAY_NAME, filename);  
+        values.put(Images.Media.DATE_TAKEN, dateTaken);  
+        values.put(Images.Media.MIME_TYPE, "image/jpeg");  
+        values.put(Images.Media.DATA, filePath);  
+        return cr.insert(IMAGE_URI, values);  
+    }  
   
     private static String createName(long dateTaken) {  
         DateFormat df = new SimpleDateFormat("-yyyyMMddHHmmss-");
